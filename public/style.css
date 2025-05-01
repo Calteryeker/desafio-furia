@@ -1,0 +1,25 @@
+body {
+  font-family: sans-serif;
+  background: #0e0e0e;
+  color: #fff;
+  text-align: center;
+}
+
+.stream {
+  margin: 20px auto;
+}
+
+.chat-container {
+  margin-top: 20px;
+}
+
+#messages {
+  list-style: none;
+  padding: 0;
+  max-height: 300px;
+  overflow-y: scroll;
+}
+
+form {
+  margin-top: 10px;
+}

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Partida da FURIA Ao Vivo</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <h1>🔥 FURIA em Campo!</h1>
+
+  <div class="stream">
+    <iframe
+      src="https://player.twitch.tv/?channel=esl_csgo&parent=localhost"
+      height="400"
+      width="700"
+      allowfullscreen>
+    </iframe>
+  </div>
+
+  <div class="chat-container">
+    <ul id="messages"></ul>
+    <form id="form">
+      <input id="input" autocomplete="off" placeholder="Digite sua mensagem" />
+      <button>Enviar</button>
+    </form>
+  </div>
+
+  <script>
+    const socket = new WebSocket('ws://' + location.host);
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+      const msg = document.createElement('li');
+      msg.textContent = data.user + ': ' + data.text;
+      document.querySelector('#messages').appendChild(msg);
+    };
+
+    document.querySelector('#form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.querySelector('#input');
+      socket.send(JSON.stringify({ text: input.value }));
+      input.value = '';
+    });
+  </script>
+</body>
+</html>
