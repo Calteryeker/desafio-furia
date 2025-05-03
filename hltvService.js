@@ -1,22 +1,54 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
+const { Hltv } = require('./hltv');
 
-async function getLiveMatches() {
-  const res = await axios.get('https://www.hltv.org/matches');
-  const $ = cheerio.load(res.data);
-  const matches = [];
+async function scrapeFuriaData() {
+  const furiaId = 8297;
 
-  $('.liveMatch').each((_, el) => {
-    const teams = $(el).find('.matchTeamName').map((i, el) => $(el).text()).get();
-    if (teams.includes('FURIA')) {
-      matches.push({
-        teams,
-        matchTime: $(el).find('.matchTime').text().trim(),
-      });
+  const teamData = await new Hltv().getTeam({ id: furiaId });
+
+  const lineup = teamData.players.map(p => p.name);
+
+  const titles = teamData.achievements?.map(t => t.place + ' - ' + t.event) || [];
+
+  const mapStats = teamData.mapStats.map(s => ({
+    map: s.map,
+    winrate: s.winRate + '%'
+  }));
+
+  const recentMatches = teamData.recentMatches?.map(m => ({
+    opponent: m.opponent,
+    result: m.score,
+    event: m.event,
+    date: new Date(m.date)
+  })) || [];
+
+  const upcomingMatches = teamData.upcomingMatches?.map(m => ({
+    opponent: m.opponent,
+    event: m.event,
+    date: new Date(m.date).toISOString()
+  })) || [];
+
+  let liveMatch = null;
+  const now = Date.now();
+  for (const match of teamData.upcomingMatches || []) {
+    if (Math.abs(new Date(match.date).getTime() - now) < 60 * 60 * 1000) {
+      liveMatch = {
+        opponent: match.opponent.name,
+        event: match.event.name,
+        time: new Date(match.date).toISOString()
+      };
+      break;
     }
-  });
+  }
 
-  return matches;
+  const doc = {
+    lineup,
+    mapStats,
+    recentMatches,
+    upcomingMatches,
+    liveMatch
+  };
+
+  return doc;
 }
 
-module.exports = { getLiveMatches };
+module.exports = { scrapeFuriaData };

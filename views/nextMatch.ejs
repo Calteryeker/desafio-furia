@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Próxima Partida da FURIA</title>
+  <link rel="stylesheet" href="/css/nextMatch.css" />
+</head>
+<body>
+  <h1>Olá, <%= username %> 👋</h1>
+
+  <div class="match-card">
+    <h2>Próxima Partida da FURIA</h2>
+    <div class="event"><%= match.event %></div>
+    <div class="opponent">vs <%= match.opponent %></div>
+    <div class="date">
+      <%= new Date(match.date).toLocaleString('pt-BR', {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) %>
+    </div>
+
+    <% const matchDate = new Date(match.date); %>
+    <% const now = new Date(); %>
+    <% const diff = matchDate - now; %>
+    <% const showCountdown = diff > 0 && diff <= 604800000; %> <!-- 7 dias -->
+    <% if (showCountdown) { %>
+      <div class="countdown" id="countdown">⏳ Carregando contagem regressiva...</div>
+    <% } %>
+  </div>
+
+  <div class="buttons">
+    <a href="/"><button>🏠 Voltar para Início</button></a>
+    <a id="chatLink" href="/furia-live">
+      <button id="chatButton" disabled>💬 Chat disponível durante a partida</button>
+    </a>
+  </div>
+
+  <% if (showCountdown) { %>
+    <script>
+      const targetDate = new Date("<%= match.date %>").getTime();
+      const countdownEl = document.getElementById('countdown');
+      const chatButton = document.getElementById('chatButton');
+      const chatLink = document.getElementById('chatLink');
+
+      const updateCountdown = () => {
+        const now = new Date().getTime();
+        const distance = targetDate - now;
+
+        if (distance <= 0) {
+          countdownEl.textContent = "🚨 A partida já começou!";
+          chatButton.disabled = false;
+          chatButton.textContent = "💬 Ir para o Chat ao Vivo";
+          return;
+        }
+
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        const dayText = days > 0 ? `${days}d ` : '';
+        countdownEl.textContent = `⏳ Começa em ${dayText}${hours}h ${minutes}min ${seconds}s`;
+      };
+
+      updateCountdown();
+      setInterval(updateCountdown, 1000);
+    </script>
+  <% } %>
+</body>
+</html>

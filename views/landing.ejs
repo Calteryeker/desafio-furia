@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>FURIA - Central de Partidas</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <h1>🐆 FURIA Esports</h1>
+
+  <% if (user) { %>
+    <p>Bem-vindo, <%= user %>!</p>
+    <% if (data.liveMatch) { %>
+      <a href="/furia-live">Ir para o Chat ao Vivo contra <%= data.liveMatch.opponent %>!</a>
+    <% } else { %>
+      <p>Nenhuma partida ao vivo agora.</p>
+    <% } %>
+  <% } else { %>
+    <a href="/login">Entrar</a> ou <a href="/register">Registrar</a>
+  <% } %>
+
+  <% if (data) { %>
+    <h2>Lineup Atual</h2>
+    <ul>
+      <% data.lineup.forEach(p => { %>
+        <li><%= p %></li>
+      <% }); %>
+    </ul>
+
+    <h2>Estatísticas por Mapa</h2>
+    <ul>
+      <% data.mapStats.forEach(s => { %>
+        <li><%= s.map %>: <%= s.winrate %></li>
+      <% }); %>
+    </ul>
+
+    <h2>Últimos Resultados</h2>
+    <ul>
+      <% data.recentMatches.forEach(m => { %>
+        <li><%= m.result %> contra <%= m.opponent %> (<%= m.event %>)</li>
+      <% }); %>
+    </ul>
+
+    <h2>Próximas Partidas</h2>
+    <ul>
+        <% data.upcomingMatches.forEach(m => { %>
+          <li><%= new Date(m.date).toLocaleString() %> vs <%= m.opponent %> (<%= m.event %>)</li>
+        <% }); %>
+    </ul>
+
+  <% } else { %>
+    <p>Nenhuma informação disponível no momento.</p>
+  <% } %>
+
+</body>
+</html>

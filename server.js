@@ -7,6 +7,8 @@ const mongoose = require('mongoose');
 const WebSocket = require('ws');
 const Message = require('./models/Message');
 const hltvService = require('./hltvService');
+const cron = require('node-cron');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -18,6 +20,7 @@ mongoose.connect(process.env.MONGO_URL);
 
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
@@ -26,6 +29,13 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
 }));
+
+var FuriaInfo = hltvService.scrapeFuriaData()
+
+app.get('/', async (req, res) => {
+  const latest = await FuriaInfo;
+  res.render('landing', { user: req.session.username, data: latest });
+});
 
 app.get('/login', (req, res) => res.render('login'));
 app.post('/login', async (req, res) => {
@@ -50,12 +60,38 @@ app.post('/register', async (req, res) => {
 });
 
 app.get('/furia-live', async (req, res) => {
-  const matches = await hltvService.getLiveMatches();
-  if (matches.length > 0 && req.session.userId) {
-    res.render('live', { username: req.session.username });
-  } else {
-    res.send('⚠️ Nenhuma partida da FURIA em andamento ou você não está logado.');
+  const furiaData = await FuriaInfo;
+  const liveMatch = furiaData.liveMatch;
+  const nextMatch = furiaData.upcomingMatches[furiaData.upcomingMatches.length - 1];
+
+  // Se há partida ao vivo e usuário logado, renderiza live
+  if (liveMatch && req.session.userId) {
+    return res.render('live', {
+      username: req.session.username,
+      match: liveMatch
+    });
   }
+
+  // Se não está logado, mostra botão para login
+  if (!req.session.userId) {
+    return res.send(`
+      <h2>⚠️ Você não está logado!</h2>
+      <a href="/login">
+        <button>Fazer login</button>
+      </a>
+    `);
+  }
+
+  // Usuário logado, mas não há partida ao vivo
+  if (nextMatch) {
+    return res.render('nextMatch', {
+      username: req.session.username,
+      match: nextMatch
+    });
+  }
+
+  // Sem partida ao vivo ou agendada
+  res.send('⚠️ A FURIA ainda não está no servidor e não há partidas agendadas!');
 });
 
 server.on('upgrade', (req, socket, head) => {
@@ -90,6 +126,15 @@ wss.on('connection', async (ws) => {
       }
     });
   });
+});
+
+cron.schedule('* 2 * * *', async () => {
+  try {
+    FuriaInfo = await hltvService.scrapeFuriaData();
+    console.log('Dados da FURIA atualizados.');
+  } catch (err) {
+    console.error('Erro ao atualizar dados da FURIA:', err);
+  }
 });
 
 server.listen(3000, () => console.log('Servidor rodando em http://localhost:3000'));
