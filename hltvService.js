@@ -7,37 +7,31 @@ async function scrapeFuriaData() {
 
   const lineup = teamData.players.map(p => p.name);
 
-  const titles = teamData.achievements?.map(t => t.place + ' - ' + t.event) || [];
-
   const mapStats = teamData.mapStats.map(s => ({
     map: s.map,
-    winrate: s.winRate + '%'
+    winrate: s.winRate
   }));
 
-  const recentMatches = teamData.recentMatches?.map(m => ({
-    opponent: m.opponent,
-    result: m.score,
-    event: m.event,
-    date: new Date(m.date)
-  })) || [];
+  const recentMatches = teamData.recentMatches ? teamData.recentMatches : [];
 
-  const upcomingMatches = teamData.upcomingMatches?.map(m => ({
-    opponent: m.opponent,
-    event: m.event,
-    date: new Date(m.date).toISOString()
-  })) || [];
+  const upcomingMatches = teamData.upcomingMatches ? teamData.upcomingMatches : [];
 
   let liveMatch = null;
-  const now = Date.now();
-  for (const match of teamData.upcomingMatches || []) {
-    if (Math.abs(new Date(match.date).getTime() - now) < 60 * 60 * 1000) {
-      liveMatch = {
-        opponent: match.opponent.name,
-        event: match.event.name,
-        time: new Date(match.date).toISOString()
-      };
-      break;
-    }
+  const nextMatch = upcomingMatches[0].matches[0]
+
+  const nextMatchData = await new Hltv().getMatch({ id: nextMatch.match_id });
+
+  if (!nextMatch.iso_date){
+    upcomingMatches[0].matches[0].iso_date = new Date(nextMatchData.date)
+  }
+
+  if (Math.abs(nextMatchData.status === 'Live')) {
+    liveMatch = {
+      opponent: nextMatch.opponent,
+      event: upcomingMatches[0].event,
+      time: new Date(nextMatchData.date),
+      match_id : nextMatch.match_id
+    };
   }
 
   const doc = {

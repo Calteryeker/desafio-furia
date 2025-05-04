@@ -14,16 +14,14 @@
     <div class="event"><%= match.event %></div>
     <div class="opponent">vs <%= match.opponent %></div>
     <div class="date">
-      <%= new Date(match.date).toLocaleString('pt-BR', {
+      <%= match.iso_date.toLocaleDateString('pt-BR', {
         weekday: 'long',
         day: '2-digit',
-        month: 'long',
-        hour: '2-digit',
-        minute: '2-digit'
+        month: 'long'
       }) %>
     </div>
 
-    <% const matchDate = new Date(match.date); %>
+    <% const matchDate = new Date(match.iso_date); %>
     <% const now = new Date(); %>
     <% const diff = matchDate - now; %>
     <% const showCountdown = diff > 0 && diff <= 604800000; %> <!-- 7 dias -->
@@ -41,7 +39,7 @@
 
   <% if (showCountdown) { %>
     <script>
-      const targetDate = new Date("<%= match.date %>").getTime();
+      const targetDate = new Date("<%= match.iso_date %>").getTime();
       const countdownEl = document.getElementById('countdown');
       const chatButton = document.getElementById('chatButton');
       const chatLink = document.getElementById('chatLink');
@@ -70,5 +68,40 @@
       setInterval(updateCountdown, 1000);
     </script>
   <% } %>
+
+  <div id="chat-box">
+    <% messages.forEach(msg => { %>
+      <div><strong><%= msg.username %>:</strong> <%= msg.text %></div>
+    <% }) %>
+  </div>
+
+  <form id="chat-form">
+    <input id="chat-input" type="text" placeholder="Mensagem..." required />
+    <button type="submit">Enviar</button>
+  </form>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    const username = "<%= username %>";
+    const matchId = "general";
+
+    socket.emit('joinRoom', matchId);
+
+    document.querySelector('#chat-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const text = document.querySelector('#chat-input').value;
+      if (text.trim()) {
+        socket.emit('sendMessage', { username, text, matchId });
+        document.querySelector('#chat-input').value = '';
+      }
+    });
+
+    socket.on('newMessage', msg => {
+      const chatBox = document.querySelector('#chat-box');
+      chatBox.innerHTML += `<div><strong>${msg.username}:</strong> ${msg.text}</div>`;
+    });
+  </script>
 </body>
 </html>

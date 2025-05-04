@@ -119,35 +119,77 @@ var getTeam = function (config) {
                         }); });
 
                         // Extrair informações de partidas futuras
-                        const upcomingMatches = $('#matchesBox .table-container.match-table').eq(0).find('tbody').toArray().flatMap(element => {
-                            const event = element.find('.event-header-cell a').text().trim();
+                        const upcomingMatches = [];
+                        var tables = $('#matchesBox .table-container.match-table').eq(0);
+
+                        var theads = tables.find('thead').toArray().slice(1); // ignora o index 0
+                        var tbodies = tables.find('tbody').toArray();
+
+                        for (let i = 0; i < Math.min(theads.length, tbodies.length); i++) {
+                            const event = theads[i].find('.event-header-cell a').text().trim();
+                            const rows = tbodies[i].find('.team-row').toArray();
                             
-                            return element.find('.team-row').toArray().map(row => {
+
+                            const matches = rows.map(row => {
                                 const date = row.find('.date-cell span').first().text().trim();
                                 const opponent = row.find('.team-name.team-2').text().trim();
-                                return { event, date, opponent };
+                                const match_id = row.find('.matchpage-button-cell .matchpage-button').attr('href').split('/')[2]
+                                const split_date = date.split("/");
+                                var iso_date
+                                if (split_date.length < 3){
+                                    iso_date = null
+                                }
+                                else{
+                                    iso_date = new Date(split_date[2], split_date[1] - 1, split_date[0]);
+                                }
+                                    
+                                return {iso_date, opponent, match_id};
                             });
-                        });
+
+                            const event_matches = {event: event, matches:matches}
+
+                            upcomingMatches.push(event_matches);
+                        }
                         
-                        const recentMatches = $('#matchesBox .table-container.match-table').eq(1).find('tbody').toArray().flatMap(element => {
-                            const event = element.find('.event-header-cell a').text().trim();
-                        
-                            return element.find('.team-row').toArray().map(row => {
+                        const recentMatches = [];
+                        tables = $('#matchesBox .table-container.match-table').eq(1);
+
+                        theads = tables.find('thead').toArray().slice(1); // ignora o index 0
+                        tbodies = tables.find('tbody').toArray();
+
+                        for (let i = 0; i < Math.min(theads.length, tbodies.length); i++) {
+                            const event = theads[i].find('.event-header-cell a').text().trim();
+                            const rows = tbodies[i].find('.team-row').toArray();
+                            
+
+                            const matches = rows.map(row => {
                                 const date = row.find('.date-cell span').first().text().trim();
                                 const opponent = row.find('.team-name.team-2').text().trim();
                                 const score = row.find('.score-cell').text().trim();
-                                return { event, date, opponent, score };
+
+                                const split_date = date.split("/");
+                                const iso_date = new Date(split_date[2], split_date[1] - 1, split_date[0]);
+
+                                return {iso_date, opponent, score };
+                            });
+
+                            const event_matches = {event: event, matches:matches}
+
+                            recentMatches.push(event_matches);
+                        }
+                        
+                        const mapStats = [];
+
+                        $('.map-statistics-container').toArray().flatMap((maps) => {
+                            const mapName = maps.find('.map-statistics-row-map-mapname').text().trim();
+                            const winPercentage = maps.find('.map-statistics-row-win-percentage').text().trim();
+                            
+                            mapStats.push({
+                                map: mapName,
+                                winRate: winPercentage
                             });
                         });
-                        
-                        const matches = $.html('#matchesBox');
-                        
-                        const mapStats = $('.map-stats .map').toArray().map(el => {
-                            return {
-                              map: $(el).find('.map-name').text().trim(),
-                              winrate: $(el).find('.statsDetail').text().trim()
-                            };
-                        });
+
                         return [2 /*return*/, {
                                 id: id,
                                 name: name,
@@ -160,10 +202,9 @@ var getTeam = function (config) {
                                 players: players,
                                 rankingDevelopment: rankingDevelopment,
                                 news: news,
-                                recentMatches: recentMatches,
+                                recentMatches: recentMatches.slice(0,10),
                                 upcomingMatches: upcomingMatches,
-                                mapStats: mapStats,
-                                test: matches
+                                mapStats: mapStats
                             }];
                 }
             });

@@ -4,16 +4,23 @@ const pgSession = require('connect-pg-simple')(session);
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
-const WebSocket = require('ws');
 const Message = require('./models/Message');
 const hltvService = require('./hltvService');
 const cron = require('node-cron');
 const path = require('path');
 require('dotenv').config();
+const socketIo = require('socket.io');
+const ChatHistory = require('./models/ChatHistory');
 
 const app = express();
 const server = require('http').createServer(app);
-const wss = new WebSocket.Server({ noServer: true });
+const io = socketIo(server); // associando o socket ao servidor
+
+// Exporta io para usar nos handlers
+module.exports.io = io;
+
+// Inicializa os sockets
+require('./sockets/chat')(io);
 
 const pgPool = new Pool({ connectionString: process.env.POSTGRES_URL });
 mongoose.connect(process.env.MONGO_URL);
@@ -26,15 +33,27 @@ app.use(express.urlencoded({ extended: true }));
 app.use(session({
   store: new pgSession({ pool: pgPool }),
   secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
+  resave: true,
+  saveUninitialized: true
 }));
 
 var FuriaInfo = hltvService.scrapeFuriaData()
 
 app.get('/', async (req, res) => {
   const latest = await FuriaInfo;
-  res.render('landing', { user: req.session.username, data: latest });
+  
+  let history = await ChatHistory.findOne({ matchId: "general" }); // ou match.id
+
+  if (!history){
+    history = await ChatHistory.collection.insertOne({matchId : "general", messages: []})
+  }
+
+  const messages = history ? history.messages : [];
+  res.render('landing', {
+    username: req.session.username,
+    data: latest,
+    messages
+  });
 });
 
 app.get('/login', (req, res) => res.render('login'));
@@ -62,13 +81,22 @@ app.post('/register', async (req, res) => {
 app.get('/furia-live', async (req, res) => {
   const furiaData = await FuriaInfo;
   const liveMatch = furiaData.liveMatch;
-  const nextMatch = furiaData.upcomingMatches[furiaData.upcomingMatches.length - 1];
+  const nextMatch = furiaData.upcomingMatches[0].matches[0];
 
   // Se há partida ao vivo e usuário logado, renderiza live
   if (liveMatch && req.session.userId) {
+    let history = await ChatHistory.findOne({ matchId: liveMatch.match_id }); // ou match.id
+
+    if (!history){
+      history = await ChatHistory.collection.insertOne({matchId : liveMatch.match_id, messages:[]})
+    }
+
+    const messages = history ? history.messages : []; 
+
     return res.render('live', {
       username: req.session.username,
-      match: liveMatch
+      match: liveMatch,
+      messages
     });
   }
 
@@ -84,9 +112,17 @@ app.get('/furia-live', async (req, res) => {
 
   // Usuário logado, mas não há partida ao vivo
   if (nextMatch) {
+    let history = await ChatHistory.findOne({ matchId: "general" }); // ou match.id
+
+    if (!history){
+      history = await ChatHistory.collection.insertOne({matchId : "general", messages:[]})
+    }
+  
+    const messages = history ? history.messages : [];
     return res.render('nextMatch', {
       username: req.session.username,
-      match: nextMatch
+      match: nextMatch,
+      messages
     });
   }
 
@@ -100,30 +136,6 @@ server.on('upgrade', (req, socket, head) => {
     wss.handleUpgrade(req, socket, head, (ws) => {
       ws.user = req.session.username;
       wss.emit('connection', ws, req);
-    });
-  });
-});
-
-wss.on('connection', async (ws) => {
-  const matches = await hltvService.getLiveMatches();
-  if (matches.length === 0) {
-    ws.send(JSON.stringify({ error: 'Chat indisponível no momento.' }));
-    ws.close();
-    return;
-  }
-
-  const matchId = matches[0].matchTime;
-  const oldMessages = await Message.find({ matchId }).sort({ timestamp: 1 });
-  oldMessages.forEach(msg => ws.send(JSON.stringify(msg)));
-
-  ws.on('message', async (data) => {
-    const { text } = JSON.parse(data);
-    const message = new Message({ text, user: ws.user, matchId });
-    await message.save();
-    wss.clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({ user: ws.user, text }));
-      }
     });
   });
 });

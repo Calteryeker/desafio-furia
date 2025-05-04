@@ -7,13 +7,11 @@
 <body>
   <h1>🐆 FURIA Esports</h1>
 
-  <% if (user) { %>
-    <p>Bem-vindo, <%= user %>!</p>
-    <% if (data.liveMatch) { %>
-      <a href="/furia-live">Ir para o Chat ao Vivo contra <%= data.liveMatch.opponent %>!</a>
-    <% } else { %>
-      <p>Nenhuma partida ao vivo agora.</p>
-    <% } %>
+  <% if (username) { %>
+    <p>Bem-vindo, <%= username %>!</p>
+    <a href="/furia-live">
+      <button>🎥 Ver partida ao vivo</button>
+    </a>
   <% } else { %>
     <a href="/login">Entrar</a> ou <a href="/register">Registrar</a>
   <% } %>
@@ -34,22 +32,69 @@
     </ul>
 
     <h2>Últimos Resultados</h2>
-    <ul>
-      <% data.recentMatches.forEach(m => { %>
-        <li><%= m.result %> contra <%= m.opponent %> (<%= m.event %>)</li>
-      <% }); %>
-    </ul>
+    <% data.recentMatches.forEach(eventBlock => { %>
+      <h3><%= eventBlock.event %></h3>
+      <ul>
+        <% eventBlock.matches.forEach(match => { %>
+          <li>
+            <strong>Data:</strong> <%= match.iso_date.toLocaleDateString() %><br>
+            <strong>Oponente:</strong> <%= match.opponent %><br>
+            <strong>Placar:</strong> <%= match.score %>
+          </li>
+        <% }) %>
+      </ul>
+    <% }) %>
 
     <h2>Próximas Partidas</h2>
-    <ul>
-        <% data.upcomingMatches.forEach(m => { %>
-          <li><%= new Date(m.date).toLocaleString() %> vs <%= m.opponent %> (<%= m.event %>)</li>
-        <% }); %>
-    </ul>
+    <% data.upcomingMatches.forEach(eventBlock => { %>
+      <h3><%= eventBlock.event %></h3>
+      <ul>
+        <% eventBlock.matches.forEach(match => { %>
+          <li>
+            <strong>Data:</strong> <%= match.iso_date.toLocaleDateString() %><br>
+            <strong>Oponente:</strong> <%= match.opponent %><br>
+          </li>
+        <% }) %>
+      </ul>
+    <% }) %>
 
   <% } else { %>
     <p>Nenhuma informação disponível no momento.</p>
   <% } %>
 
+  <div id="chat-box">
+    <% messages.forEach(msg => { %>
+      <div><strong><%= msg.username %>:</strong> <%= msg.text %></div>
+    <% }) %>
+  </div>
+
+  <form id="chat-form">
+    <input id="chat-input" type="text" placeholder="Mensagem..." required />
+    <button type="submit">Enviar</button>
+  </form>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    const username = "<%= username %>";
+    const matchId = "general";
+
+    socket.emit('joinRoom', matchId);
+
+    document.querySelector('#chat-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const text = document.querySelector('#chat-input').value;
+      if (text.trim()) {
+        socket.emit('sendMessage', { username, text, matchId });
+        document.querySelector('#chat-input').value = '';
+      }
+    });
+
+    socket.on('newMessage', msg => {
+      const chatBox = document.querySelector('#chat-box');
+      chatBox.innerHTML += `<div><strong>${msg.username}:</strong> ${msg.text}</div>`;
+    });
+  </script>
 </body>
 </html>
