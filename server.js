@@ -106,7 +106,7 @@ app.post('/register', async (req, res) => {
 
   try {
     // Verifica se o nome de usuário já existe
-    const result = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+    const result = await pgPool.query('SELECT id FROM users WHERE username = $1', [username]);
     if (result.rows.length > 0) {
       return res.status(409).json({ error: 'Nome de usuário já está em uso.' });
     }
@@ -114,8 +114,8 @@ app.post('/register', async (req, res) => {
     // Criptografa e insere
     const hashedPassword = await bcrypt.hash(password, 10);
     await pgPool.query(
-      'INSERT INTO users (username, email, password) VALUES ($1, $2, $3)',
-      [username, email, hashedPassword]
+      'INSERT INTO users (username, password_hash) VALUES ($1, $2)',
+      [username, hashedPassword]
     );
 
     res.redirect('/');
@@ -167,7 +167,7 @@ app.get('/furia-live', async (req, res) => {
     const messages = history ? history.messages : [];
     
     let recentMessages = messages.filter(msg => new Date() - new Date(msg.createdAt) <= 3 * 60 * 1000);
-    
+
     return res.render('nextMatch', {
       username: req.session.username,
       match: nextMatch,

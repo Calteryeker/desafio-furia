@@ -13,6 +13,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  max-height: 300px;
 }
 
 .navbar .nav-links button {
@@ -173,4 +174,9 @@ h2 {
 .buttons a button:disabled {
   background: #444;
   cursor: not-allowed;
+}
+
+.auth-container{
+  display: flex;
+  position: relative;
 }
