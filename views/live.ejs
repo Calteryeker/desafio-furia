@@ -6,27 +6,41 @@
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <h1>🔥 FURIA em Campo!</h1>
+  <main class="main-grid">
+    <section class="info-section">
+      <div class="buttons">
+        <a href="/"><button>🏠 Voltar para Início</button></a>
+      </div>
+      <h1>🔥 FURIA em Campo!</h1>
+        <div class="stream">
+          <iframe
+            src="https://player.twitch.tv/?channel=fl0m&parent=localhost"
+            height="400"
+            width="100%"
+            allowfullscreen>
+          </iframe>
+        </div>
+    </section>
+    <section class="chat-section">
+      <h2>Chat da Partida</h2>
+      <div id="chat-box" class="chat-box">
+        <% messages.forEach(msg => { %>
+          <div><strong><%= msg.username %>:</strong> <%= msg.text %></div>
+        <% }) %>
+      </div>
 
-  <div class="stream">
-    <iframe
-      src="https://player.twitch.tv/?channel=fl0m&parent=localhost"
-      height="400"
-      width="700"
-      allowfullscreen>
-    </iframe>
-  </div>
+      <% if (username) { %>
+        <form id="chat-form" class="chat-form" autocomplete="off">
+          <input id="chat-input" type="text" placeholder="Mensagem..." required autocomplete="off" />
+        </form>
+      <% } else { %>
+        <p class="login-notice">Você precisa estar logado para enviar mensagens.</p>
+      <% } %>
+    </section>
+  </main>
+  
 
-  <div id="chat-box">
-    <% messages.forEach(msg => { %>
-      <div><strong><%= msg.username %>:</strong> <%= msg.text %></div>
-    <% }) %>
-  </div>
-
-  <form id="chat-form">
-    <input id="chat-input" type="text" placeholder="Mensagem..." required />
-    <button type="submit">Enviar</button>
-  </form>
+  
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
