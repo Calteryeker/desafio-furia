@@ -37,5 +37,5 @@ Chat em tempo real durante partidas ao vivo da FURIA, com autenticação de usu�
    ```
 
 5. Acesse:
-   - http://localhost:3000/login
+   - http://localhost:3000/
    - http://localhost:3000/furia-live
