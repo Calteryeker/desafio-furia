@@ -47,3 +47,24 @@ Chat em tempo real durante partidas ao vivo da FURIA, com autenticação de usu�
 5. Acesse:
    - http://localhost:3000/
    - http://localhost:3000/furia-live
+
+Imagens das telas:
+
+![image](https://drive.google.com/uc?export=view&id=1OzCi-DDuXAZPzh7DJzvIOeRitAn90sfU)
+Home Sem Login
+
+![image](https://drive.google.com/uc?export=view&id=1yKhrlltIALsVYxXUElbMcaPmDmFHuHUP)
+Home Chat sem login
+
+![image](https://drive.google.com/uc?export=view&id=1wtpxdK1Ua7i0XNQpU8Ou9AfOlGDVQyo2)
+Home Logado
+
+![image](https://drive.google.com/uc?export=view&id=1W_pgliQXRs5WXDr1ZeT1G_yqrkfLEI5J)
+Home Chat Logado
+
+![image](https://drive.google.com/uc?export=view&id=1oUoMKd8peIFZdkvVys2nms1KPPr0m29f)
+Sala de espera próxima partida
+
+![image](https://drive.google.com/uc?export=view&id=1kvPfQcgQ9h7L2b87AIGwSDRYjU9qtjuT)
+Chat da partida
+
