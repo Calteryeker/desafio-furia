@@ -1,7 +1,10 @@
 const ChatHistory = require('../models/ChatHistory'); // modelo do MongoDB
 
 module.exports = (io) => {
+
   io.on('connection', (socket) => {
+    const username = socket.request.session.username;
+    if (!username) return;
     console.log('Novo usuário conectado');
 
     async function saveMessageToHistory({ username, text, matchId }) {

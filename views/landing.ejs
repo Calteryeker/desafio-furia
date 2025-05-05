@@ -5,95 +5,192 @@
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <h1>🐆 FURIA Esports</h1>
+  <nav class="navbar">
+    <% if (!username) { %>
+      <button id="loginBtn">Login</button>
+      <button id="registerBtn">Registrar</button>
+    <% } else { %>
+      <span class="welcome-text">Bem-vindo, <%= username %>!</span>
+      <a href='/furia-live'><button id="liveBtn">🎥 Ver partida ao vivo</button></a>
+      <form id="logout-form" method="POST" action="/logout">
+        <button type="submit">Logoff</button>
+      </form>
+      
+    <% } %>
+    
+    <div id="warning"></div>
 
-  <% if (username) { %>
-    <p>Bem-vindo, <%= username %>!</p>
-    <a href="/furia-live">
-      <button>🎥 Ver partida ao vivo</button>
-    </a>
-  <% } else { %>
-    <a href="/login">Entrar</a> ou <a href="/register">Registrar</a>
-  <% } %>
+    <div class="auth-container">
+      <div id="loginForm" class="auth-form hidden">
+        <form method="POST" action="/login">
+          <input name="username" placeholder="Usuário" required />
+          <input name="password" type="password" placeholder="Senha" required />
+          <button type="submit">Entrar</button>
+        </form>
+      </div>
 
-  <% if (data) { %>
-    <h2>Lineup Atual</h2>
-    <ul>
-      <% data.lineup.forEach(p => { %>
-        <li><%= p %></li>
-      <% }); %>
-    </ul>
+      <div id="registerForm" class="auth-form hidden">
+        <form id="registerFormElement" action="/register" method="POST">
+          <input
+            type="text"
+            name="username"
+            placeholder="Usuário"
+            required
+            pattern="^[a-zA-Z0-9_.]+$"
+            title="Use apenas letras, números, _ e ."
+          />
+          <input
+            type="password"
+            name="password"
+            placeholder="Senha"
+            required
+            minlength="8"
+            title="A senha deve ter pelo menos 8 caracteres"
+          />
+          <button type="submit">Registrar</button>
+        </form>
+      </div>
+    </div>
+  </nav>
 
-    <h2>Estatísticas por Mapa</h2>
-    <ul>
-      <% data.mapStats.forEach(s => { %>
-        <li><%= s.map %>: <%= s.winrate %></li>
-      <% }); %>
-    </ul>
+  <header class="main-header">
+    <h1>🐆 FURIA Esports</h1>
+  </header>
 
-    <h2>Últimos Resultados</h2>
-    <% data.recentMatches.forEach(eventBlock => { %>
-      <h3><%= eventBlock.event %></h3>
-      <ul>
-        <% eventBlock.matches.forEach(match => { %>
-          <li>
-            <strong>Data:</strong> <%= match.iso_date.toLocaleDateString() %><br>
-            <strong>Oponente:</strong> <%= match.opponent %><br>
-            <strong>Placar:</strong> <%= match.score %>
-          </li>
+  <main class="main-grid">
+
+    <div class="info-section">
+      <% if (data) { %>
+        <section class="section-block">
+          <h2>Lineup Atual</h2>
+          <ul>
+            <% data.lineup.forEach(p => { %>
+              <% if (p) { %>
+                <li><%= p %></li>
+              <% } %>
+            <% }); %>
+          </ul>
+        </section>
+
+        <section class="section-block">
+          <h2>Próximas Partidas</h2>
+          <% data.upcomingMatches.forEach(eventBlock => { %>
+            <h3><%= eventBlock.event %></h3>
+            <ul>
+              <% eventBlock.matches.forEach(match => { %>
+                <li>
+                  <strong>Data:</strong> <%= match.iso_date.toLocaleDateString() %><br>
+                  <strong>Oponente:</strong> <%= match.opponent %><br>
+                </li>
+              <% }) %>
+            </ul>
+          <% }) %>
+        </section>
+
+        <section class="section-block">
+          <h2>Estatísticas por Mapa</h2>
+          <ul>
+            <% data.mapStats.forEach(s => { %>
+              <li><%= s.map %>: <%= s.winrate %></li>
+            <% }); %>
+          </ul>
+        </section>
+  
+        <section class="section-block">
+          <h2>Últimos Resultados</h2>
+          <% data.recentMatches.forEach(eventBlock => { %>
+            <h3><%= eventBlock.event %></h3>
+            <ul>
+              <% eventBlock.matches.forEach(match => { %>
+                <li>
+                  <%= match.iso_date.toLocaleDateString() %> <%= match.score %> vs <%= match.opponent %>
+                </li>
+              <% }) %>
+            </ul>
+          <% }) %>
+        </section>
+  
+        
+      <% } else { %>
+        <p class="no-data-message">Nenhuma informação disponível no momento.</p>
+      <% } %>
+    </div>
+    
+    <section class="chat-section">
+      <h2>Chat Geral</h2>
+      <div id="chat-box" class="chat-box">
+        <% messages.forEach(msg => { %>
+          <div><strong><%= msg.username %>:</strong> <%= msg.text %></div>
         <% }) %>
-      </ul>
-    <% }) %>
+      </div>
+  
+      <% if (username) { %>
+        <form id="chat-form" class="chat-form" autocomplete="off">
+          <input id="chat-input" type="text" placeholder="Mensagem..." required autocomplete="off" />
+        </form>
+      <% } else { %>
+        <p class="login-notice">Você precisa estar logado para enviar mensagens.</p>
+      <% } %>
+    </section>
+  </main>
 
-    <h2>Próximas Partidas</h2>
-    <% data.upcomingMatches.forEach(eventBlock => { %>
-      <h3><%= eventBlock.event %></h3>
-      <ul>
-        <% eventBlock.matches.forEach(match => { %>
-          <li>
-            <strong>Data:</strong> <%= match.iso_date.toLocaleDateString() %><br>
-            <strong>Oponente:</strong> <%= match.opponent %><br>
-          </li>
-        <% }) %>
-      </ul>
-    <% }) %>
-
-  <% } else { %>
-    <p>Nenhuma informação disponível no momento.</p>
-  <% } %>
-
-  <div id="chat-box">
-    <% messages.forEach(msg => { %>
-      <div><strong><%= msg.username %>:</strong> <%= msg.text %></div>
-    <% }) %>
-  </div>
-
-  <form id="chat-form">
-    <input id="chat-input" type="text" placeholder="Mensagem..." required />
-    <button type="submit">Enviar</button>
-  </form>
-
+  <!-- Scripts -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
-
     const username = "<%= username %>";
     const matchId = "general";
 
     socket.emit('joinRoom', matchId);
 
-    document.querySelector('#chat-form').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const text = document.querySelector('#chat-input').value;
-      if (text.trim()) {
-        socket.emit('sendMessage', { username, text, matchId });
-        document.querySelector('#chat-input').value = '';
-      }
-    });
+    if (username) {
+      document.querySelector('#chat-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const input = document.querySelector('#chat-input');
+        const text = input.value;
+        if (text.trim()) {
+          socket.emit('sendMessage', { username, text, matchId });
+          input.value = '';
+        }
+      });
+    }
 
     socket.on('newMessage', msg => {
       const chatBox = document.querySelector('#chat-box');
       chatBox.innerHTML += `<div><strong>${msg.username}:</strong> ${msg.text}</div>`;
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // Toggle login/register forms
+    document.getElementById('loginBtn')?.addEventListener('click', () => {
+      document.getElementById('loginForm').classList.remove('hidden');
+      document.getElementById('registerForm').classList.add('hidden');
+    });
+
+    document.getElementById('registerBtn')?.addEventListener('click', () => {
+      document.getElementById('registerForm').classList.remove('hidden');
+      document.getElementById('loginForm').classList.add('hidden');
+    });
+
+    // Register form validation
+    document.getElementById('registerFormElement')?.addEventListener('submit', function (e) {
+      const username = this.username.value;
+      const password = this.password.value;
+      const usernameRegex = /^[a-zA-Z0-9_.]+$/;
+
+      if (!usernameRegex.test(username)) {
+        alert('O nome de usuário só pode conter letras, números, _ e .');
+        e.preventDefault();
+        return;
+      }
+
+      if (password.length < 8) {
+        alert('A senha deve ter pelo menos 8 caracteres.');
+        e.preventDefault();
+        return;
+      }
     });
   </script>
 </body>

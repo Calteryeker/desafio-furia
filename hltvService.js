@@ -5,7 +5,15 @@ async function scrapeFuriaData() {
 
   const teamData = await new Hltv().getTeam({ id: furiaId });
 
-  const lineup = teamData.players.map(p => p.name);
+  const lineup = teamData.players.map(p => {
+    if(p.type === 'Starter'){
+      return p.name
+    }
+    if(p.type === 'Coach'){
+      let coachname =  p.name + "(Coach)"
+      return coachname
+    }
+  });
 
   const mapStats = teamData.mapStats.map(s => ({
     map: s.map,

@@ -30,12 +30,17 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
 
-app.use(session({
+const sessionMiddleware = session({
   store: new pgSession({ pool: pgPool }),
   secret: process.env.SESSION_SECRET,
   resave: true,
   saveUninitialized: true
-}));
+})
+app.use(sessionMiddleware);
+
+io.use((socket, next) => {
+  sessionMiddleware(socket.request, {}, next);
+});
 
 var FuriaInfo = hltvService.scrapeFuriaData()
 
@@ -46,17 +51,20 @@ app.get('/', async (req, res) => {
 
   if (!history){
     history = await ChatHistory.collection.insertOne({matchId : "general", messages: []})
+    history = await ChatHistory.findOne({ matchId: "general" }); // ou match.id
   }
 
-  const messages = history ? history.messages : [];
+  let messages = history ? history.messages : [];
+
+  let recentMessages = messages.filter(msg => new Date() - new Date(msg.createdAt) <= 3 * 60 * 1000);
+
   res.render('landing', {
     username: req.session.username,
     data: latest,
-    messages
+    messages: recentMessages
   });
 });
 
-app.get('/login', (req, res) => res.render('login'));
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   const result = await pgPool.query('SELECT * FROM users WHERE username = $1', [username]);
@@ -64,18 +72,57 @@ app.post('/login', async (req, res) => {
   if (user && await bcrypt.compare(password, user.password_hash)) {
     req.session.userId = user.id;
     req.session.username = user.username;
-    res.redirect('/furia-live');
+    res.redirect('/');
   } else {
     res.send('Login inválido.');
   }
 });
 
-app.get('/register', (req, res) => res.render('register'));
+app.post('/logout', (req, res) => {
+  req.session.destroy(err => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Erro ao fazer logoff.' });
+    }
+    res.clearCookie('connect.sid');
+    res.redirect('/');
+  });
+});
+
 app.post('/register', async (req, res) => {
-  const { username, password } = req.body;
-  const hash = await bcrypt.hash(password, 10);
-  await pgPool.query('INSERT INTO users (username, password_hash) VALUES ($1, $2)', [username, hash]);
-  res.redirect('/login');
+  const { username, email, password } = req.body;
+
+  const usernameRegex = /^[a-zA-Z0-9_.]+$/;
+
+  // Validação do nome de usuário
+  if (!usernameRegex.test(username)) {
+    return res.status(400).json({ error: 'Nome de usuário inválido. Use apenas letras, números, "_" e "."' });
+  }
+
+  // Validação da senha
+  if (!password || password.length < 8) {
+    return res.status(400).json({ error: 'A senha deve ter pelo menos 8 caracteres.' });
+  }
+
+  try {
+    // Verifica se o nome de usuário já existe
+    const result = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+    if (result.rows.length > 0) {
+      return res.status(409).json({ error: 'Nome de usuário já está em uso.' });
+    }
+
+    // Criptografa e insere
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await pgPool.query(
+      'INSERT INTO users (username, email, password) VALUES ($1, $2, $3)',
+      [username, email, hashedPassword]
+    );
+
+    res.redirect('/');
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao registrar usuário.' });
+  }
 });
 
 app.get('/furia-live', async (req, res) => {
@@ -89,25 +136,23 @@ app.get('/furia-live', async (req, res) => {
 
     if (!history){
       history = await ChatHistory.collection.insertOne({matchId : liveMatch.match_id, messages:[]})
+      history = await ChatHistory.findOne({ matchId: liveMatch.match_id });
     }
 
-    const messages = history ? history.messages : []; 
+    let messages = history ? history.messages : []; 
+
+    let recentMessages = messages.filter(msg => new Date() - new Date(msg.createdAt) <= 3 * 60 * 1000);
 
     return res.render('live', {
       username: req.session.username,
       match: liveMatch,
-      messages
+      messages: recentMessages
     });
   }
 
   // Se não está logado, mostra botão para login
   if (!req.session.userId) {
-    return res.send(`
-      <h2>⚠️ Você não está logado!</h2>
-      <a href="/login">
-        <button>Fazer login</button>
-      </a>
-    `);
+    return res.redirect('/');
   }
 
   // Usuário logado, mas não há partida ao vivo
@@ -116,13 +161,17 @@ app.get('/furia-live', async (req, res) => {
 
     if (!history){
       history = await ChatHistory.collection.insertOne({matchId : "general", messages:[]})
+      history = await ChatHistory.findOne({ matchId: "general" });
     }
-  
+
     const messages = history ? history.messages : [];
+    
+    let recentMessages = messages.filter(msg => new Date() - new Date(msg.createdAt) <= 3 * 60 * 1000);
+    
     return res.render('nextMatch', {
       username: req.session.username,
       match: nextMatch,
-      messages
+      messages: recentMessages
     });
   }
 
